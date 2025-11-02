@@ -12,22 +12,23 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
-    baseURL: 'https://playwright.dev',
   },
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
+      use: { 
+        ...devices['Desktop Chrome'],
+        launchOptions: {
+          args: [
+            '--headless',                    // Ejecutar en modo headless
+            '--disable-gpu',                 // Necesario para algunos entornos headless
+            '--no-sandbox',                  // Necesario para algunos entornos CI/CD
+            '--disable-dev-shm-usage',       // Evitar problemas con recursos de memoria compartida
+            '--window-size=1920,1080',       // Establecer un tamaño de ventana fijo
+            '--remote-debugging-port=9222'   // Para depuración remota si es necesario
+          ]
+        }
+      },
     },
   ],
-  // Uncomment to run headed locally:
-  // use: { headless: false }
 });
