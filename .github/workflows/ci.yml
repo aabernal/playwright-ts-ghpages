@@ -1,0 +1,78 @@
+name: E2E Tests & Pages
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run tests (HTML report)
+        run: npx playwright test --reporter=html
+
+      - name: Prepare Pages artifact
+        run: |
+          rm -rf public
+          mkdir -p public
+          cp -r playwright-report/* public/
+          # avoid Jekyll processing to keep assets untouched
+          touch public/.nojekyll
+          # simple index
+          cat > public/index.html <<'HTML'
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>Playwright Report</title>
+          </head>
+          <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial;">
+            <main style="max-width: 900px; margin: 40px auto; padding: 0 16px;">
+              <h1>Playwright Report</h1>
+              <p>Este sitio contiene el reporte HTML generado por Playwright.</p>
+              <p><a href="./index.html">Abrir reporte</a></p>
+            </main>
+          </body>
+          </html>
+          HTML
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
